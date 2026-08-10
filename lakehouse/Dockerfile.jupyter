@@ -1,0 +1,18 @@
+FROM jupyter/pyspark-notebook:spark-3.5.0
+
+USER root
+
+# Install Hadoop dependencies
+RUN apt update 
+RUN apt install -y openjdk-8-jdk 
+
+RUN apt install -y libhdfs3-dev 
+# Configure environment
+ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+ENV HADOOP_HOME=/opt/hadoop
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$JAVA_HOME/jre/lib/amd64/server:$HADOOP_HOME/lib/native
+ENV ARROW_LIBHDFS_DIR=$HADOOP_HOME/lib/native
+
+USER jovyan
+# Install Python packages
+RUN pip install pyarrow hdfs findspark jupyterlab

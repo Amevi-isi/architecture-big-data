@@ -1,0 +1,114 @@
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - datalake_network
+    ports:
+      - "27020:27017"
+
+  cassandra:
+    image: cassandra:latest
+    container_name: cassandra
+    environment:
+      CASSANDRA_CLUSTER_NAME: MyCluster
+      CASSANDRA_USER: cassandra
+      CASSANDRA_PASSWORD: password
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    networks:
+      - datalake_network
+    ports:
+      - "9042:9042"
+
+  couchdb:
+    image: couchdb:latest
+    container_name: couchdb
+    environment:
+      COUCHDB_USER: admin
+      COUCHDB_PASSWORD: password
+    volumes:
+      - couchdb_data:/opt/couchdb/data
+    networks:
+      - datalake_network
+    ports:
+      - "5984:5984"
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    environment:
+      REDIS_PASSWORD: password
+    volumes:
+      - redis_data:/data
+    networks:
+      - datalake_network
+    ports:
+      - "6379:6379"
+
+  dynamodb:
+    image: localstack/localstack:latest
+    container_name: dynamodb
+    environment:
+      SERVICES: dynamodb
+      DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    volumes:
+      - dynamodb_data:/var/lib/localstack
+    networks:
+      - datalake_network
+    ports:
+      - "4566:4566"
+
+  neo4j:
+    image: neo4j:latest
+    container_name: neo4j
+    environment:
+      NEO4J_AUTH: neo4j/password
+    volumes:
+      - neo4j_data:/data
+    networks:
+      - datalake_network
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+
+  postgresdb:
+    image: postgres:alpine
+    container_name: postgresdb
+    networks:
+      - datalake_network
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgresdb_data:/var/lib/postgresql/data
+    ports:
+      - "5454:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+
+volumes:
+  mongodb_data:
+  cassandra_data:
+  couchdb_data:
+  redis_data:
+  dynamodb_data:
+  neo4j_data:
+  postgresdb_data:
+
+networks:
+  datalake_network:
+    external: true
+

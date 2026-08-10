@@ -1,0 +1,32 @@
+<configuration>
+  <!-- POSTGRESQL CONFIG - NO DERBY REFERENCES -->
+  <property>
+    <name>javax.jdo.option.ConnectionURL</name>
+    <value>jdbc:postgresql://hive-metastore-db:5432/metastore</value>
+  </property>
+  <property>
+    <name>javax.jdo.option.ConnectionDriverName</name>
+    <value>org.postgresql.Driver</value>
+  </property>
+  <property>
+    <name>javax.jdo.option.ConnectionUserName</name>
+    <value>hive</value>  <!-- Doit correspondre au rôle créé -->
+  </property>
+  <property>
+    <name>javax.jdo.option.ConnectionPassword</name>
+    <value>hivepassword</value>  <!-- Identique au mot de passe créé -->
+  </property>
+  <!-- EXPLICITLY DISABLE DERBY -->
+  <property>
+    <name>hive.metastore.uris</name>
+    <value>thrift://hive-metastore:9083</value>
+  </property>
+  <property>
+    <name>hive.metastore.local</name>
+    <value>false</value>
+  </property>
+  <property>
+  <name>hive.log4j.file</name>
+  <value>/opt/hive/conf/log4j2.properties</value>
+</property>
+</configuration>

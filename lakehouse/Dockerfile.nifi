@@ -1,0 +1,82 @@
+FROM apache/nifi:2.3.0
+
+USER root
+
+# Install necessary dependencies (system tools + Python)
+RUN apt-get update && apt-get install -y \
+    wget \
+    curl \
+    gnupg \
+    vim \
+    iputils-ping \
+    python3 \
+    python3-pip \
+    python3-venv  # Nécessaire pour créer un environnement virtuel
+
+# Créer un environnement virtuel pour Python
+RUN python3 -m venv /opt/nifi/nifi-current/venv
+
+# Activer l'environnement virtuel et installer les dépendances Python
+RUN /opt/nifi/nifi-current/venv/bin/pip install --upgrade pip && \
+    /opt/nifi/nifi-current/venv/bin/pip install openpyxl pandas hdfs pyspark
+
+# Création du répertoire extensions
+RUN mkdir -p /opt/nifi/nifi-current/extensions
+
+# Création du répertoire pour les scripts (avec sous-répertoire observatoire_numerique)
+RUN mkdir -p /opt/nifi/nifi-current/scripts/observatoire_numerique
+
+# Copier tous les fichiers .py depuis nifi/scripts/observatoire_numerique/ vers /opt/nifi/nifi-current/scripts/observatoire_numerique/
+COPY nifi/scripts/observatoire_numerique/*.py /opt/nifi/nifi-current/scripts/observatoire_numerique/
+
+# Définir les permissions pour les scripts
+RUN chmod 644 /opt/nifi/nifi-current/scripts/observatoire_numerique/*.py
+
+# Install Hadoop and HBase client libraries
+ARG NIFI_HADOOP_VERSION=2.3.0
+ARG NIFI_HBASE_VERSION_NAR=1.15.2
+ARG NIFI_HBASE_VERSION_JAR=2.4.11
+ARG NIFI_HBASE_REDIS_NAR=1.15.2
+ARG NIFI_HBASE_REDIS_JAR=2.4.11
+
+# Download and install Hadoop client
+RUN curl -o /opt/nifi/nifi-current/lib/nifi-hadoop-nar-${NIFI_HADOOP_VERSION}.nar \
+    https://repo1.maven.org/maven2/org/apache/nifi/nifi-hadoop-nar/${NIFI_HADOOP_VERSION}/nifi-hadoop-nar-${NIFI_HADOOP_VERSION}.nar
+
+RUN curl -o /opt/nifi/nifi-current/lib/nifi-hadoop-libraries-nar-${NIFI_HADOOP_VERSION}.nar \
+    https://repo1.maven.org/maven2/org/apache/nifi/nifi-hadoop-libraries-nar/${NIFI_HADOOP_VERSION}/nifi-hadoop-libraries-nar-${NIFI_HADOOP_VERSION}.nar
+
+# Download MySQL JDBC Driver (Latest 8.0.x)
+RUN curl -L https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-8.0.28.tar.gz | tar xz \
+    && mv mysql-connector-java-8.0.28/mysql-connector-java-8.0.28.jar /opt/nifi/nifi-current/lib/mysql-connector-java.jar \
+    && rm -rf mysql-connector-java-8.0.28
+
+# Download PostgreSQL JDBC Driver (Latest 42.x)
+RUN curl -L https://jdbc.postgresql.org/download/postgresql-42.5.4.jar -o /opt/nifi/nifi-current/lib/postgresql-jdbc.jar
+
+# Copy configuration files
+COPY envxml/core-site.xml /opt/nifi/nifi-current/hadoop-conf/
+COPY envxml/hdfs-site.xml /opt/nifi/nifi-current/hadoop-conf/
+COPY nifi.properties /opt/nifi/nifi-current/conf/
+
+# Set environment variables
+ENV HBASE_CONF_DIR=/opt/nifi/nifi-current/hbase-conf
+ENV HADOOP_CONF_DIR=/opt/nifi/nifi-current/hadoop-conf
+
+# Set permissions for NiFi user
+RUN chown -R nifi:nifi /opt/nifi/nifi-current/lib/ && \
+    chown -R nifi:nifi /opt/nifi/nifi-current/hadoop-conf/ && \
+
+    chown -R nifi:nifi /opt/nifi/nifi-current/scripts/ && \
+    chown -R nifi:nifi /opt/nifi/nifi-current/venv/ && \
+
+    chown -R nifi:nifi /opt/nifi/nifi-current/ && \
+    chown -R nifi:nifi /opt/nifi/nifi-current/conf/ && \
+    mkdir -p /data/raw/nifi
+
+COPY nifi_conf/nifi.properties /opt/nifi/nifi-current/conf/
+
+# Switch back to NiFi user
+USER nifi
+
+ENTRYPOINT ["/opt/nifi/nifi-current/bin/nifi.sh", "run"]
